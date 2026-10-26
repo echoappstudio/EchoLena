@@ -2,10 +2,10 @@ import AppKit
 import Observation
 import Sparkle
 
-/// Clipboard Shelf's automatic updates, through Sparkle.
+/// EchoLena's automatic updates, through Sparkle.
 ///
 /// Sparkle checks every hour (set in Info.plist) and once right after launch. When automatic
-/// installs are on, a downloaded update is installed and Clipboard Shelf relaunched once the shelf
+/// installs are on, a downloaded update is installed and EchoLena relaunched once the shelf
 /// is closed. The shelf lives in the menu bar, so an update found by a scheduled check shows as a
 /// row in the shelf instead of a window that may open behind other apps.
 @MainActor
@@ -15,7 +15,7 @@ final class UpdateController: NSObject {
     private(set) var automaticallyChecks = false
     private(set) var automaticallyInstalls = false
     private(set) var lastCheckDate: Date?
-    /// A background check found an update and Clipboard Shelf is waiting for the user to look at it.
+    /// A background check found an update and EchoLena is waiting for the user to look at it.
     private(set) var updateWaiting: String?
 
     @ObservationIgnored private var controller: SPUStandardUpdaterController?
@@ -82,7 +82,7 @@ final class UpdateController: NSObject {
         lastCheckDate = updater.lastUpdateCheckDate
     }
 
-    /// Runs `install` once Clipboard Shelf isn't busy any more.
+    /// Runs `install` once EchoLena isn't busy any more.
     private func installWhenIdle(_ install: @escaping () -> Void) {
         pendingInstall = install
         installWaitTask?.cancel()
@@ -103,7 +103,7 @@ final class UpdateController: NSObject {
 }
 
 extension UpdateController: SPUUpdaterDelegate {
-    /// With automatic installs on, Sparkle hands over the downloaded update; Clipboard Shelf installs
+    /// With automatic installs on, Sparkle hands over the downloaded update; EchoLena installs
     /// and relaunches as soon as it's idle instead of waiting for the next quit.
     @objc(updater:willInstallUpdateOnQuit:immediateInstallationBlock:)
     func updater(_ updater: SPUUpdater, willInstallUpdateOnQuit item: SUAppcastItem, immediateInstallationBlock immediateInstallHandler: @escaping () -> Void) -> Bool {

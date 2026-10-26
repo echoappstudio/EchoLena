@@ -1,8 +1,8 @@
 import Foundation
 
-private var failures = 0
+var failures = 0
 
-private func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
+func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
     if !condition() {
         failures += 1
         fputs("FAIL: \(message)\n", stderr)
@@ -163,9 +163,9 @@ private func testUpdateSettingsAreInInfoPlist() {
         return
     }
 
-    expect(info["CFBundleIdentifier"] as? String == "local.clipboardshelf", "the bundle identifier must not change")
+    expect(info["CFBundleIdentifier"] as? String == "com.echoapps.echolena", "the bundle identifier is EchoLena's")
     expect(
-        info["SUFeedURL"] as? String == "https://github.com/9phfr6dsw4-dotcom/clipboard-shelf/releases/latest/download/appcast.xml",
+        info["SUFeedURL"] as? String == "https://github.com/echoappstudio/EchoLena/releases/latest/download/appcast.xml",
         "updates should come from the latest GitHub release feed"
     )
     expect(info["SUEnableAutomaticChecks"] as? Bool == true, "automatic checks should be on")
@@ -238,79 +238,6 @@ private func testTimeTextNamesTheSourceApp() {
     )
 }
 
-private func testSkinsAndLookSettings() {
-    expect(ShelfSkin.allCases.count == 6, "there are six skins")
-    expect(Set(ShelfSkin.allCases.map { $0.rawValue }).count == 6, "every skin has its own name")
-    expect(Set(ShelfSkin.allCases.map { $0.title }).count == 6, "every skin has its own title")
-    let accents = ShelfSkin.allCases.map { $0.accent }
-    expect(accents.indices.allSatisfy { index in !accents[(index + 1)...].contains(accents[index]) }, "every skin has its own accent colour")
-    expect(ShelfSkin.from(stored: nil) == .classic, "no stored skin means Classic")
-    expect(ShelfSkin.from(stored: "grape") == .grape, "a stored skin is used")
-    expect(ShelfSkin.from(stored: "retired-skin") == .classic, "an unknown stored skin falls back to Classic")
-    expect(ShelfAppearance.from(stored: nil) == .auto, "no stored appearance means Automatic")
-    expect(ShelfAppearance.from(stored: "dark") == .dark, "a stored appearance is used")
-    expect(ShelfAppearance.from(stored: "sepia") == .auto, "an unknown appearance falls back to Automatic")
-    expect(ShelfRGB(hex: 0xFF0000) == ShelfRGB(hex: 0xFF0000) && ShelfRGB(hex: 0x14B8A6).green > ShelfRGB(hex: 0x14B8A6).red, "hex colours convert to numbers")
-
-    let suite = "local.clipboardshelf.tests.\(UUID().uuidString)"
-    guard let defaults = UserDefaults(suiteName: suite) else {
-        expect(false, "a throwaway preference domain should be available")
-        return
-    }
-    defer { defaults.removePersistentDomain(forName: suite) }
-
-    let fresh = ShelfPreferences.load(from: defaults)
-    expect(fresh.skin == .classic && fresh.appearance == .auto, "a fresh install starts with Classic and Automatic")
-    expect(fresh.showSourceIcons, "source app icons are on by default")
-    expect(fresh.appIconFollowsSkin, "the app icon follows the skin by default")
-    expect(defaults.dictionaryRepresentation().keys.allSatisfy { !$0.hasPrefix("ClipboardShelf") }, "loading the settings writes nothing")
-
-    var chosen = fresh
-    chosen.skin = .rose
-    chosen.appearance = .light
-    chosen.showSourceIcons = false
-    chosen.appIconFollowsSkin = false
-    chosen.save(to: defaults)
-    expect(ShelfPreferences.load(from: defaults) == chosen, "the chosen look is remembered")
-
-    // Choosing Lagoon in 1.3.0 or later is kept.
-    chosen.skin = .lagoon
-    chosen.save(to: defaults)
-    expect(ShelfPreferences.load(from: defaults).skin == .lagoon, "Lagoon chosen in 1.3.0 is kept")
-}
-
-/// 1.2.0 wrote every look setting at once, including Lagoon, its default, and had no version marker.
-private func testOldDefaultSkinMovesToClassic() {
-    let suite = "local.clipboardshelf.tests.\(UUID().uuidString)"
-    guard let defaults = UserDefaults(suiteName: suite) else {
-        expect(false, "a throwaway preference domain should be available")
-        return
-    }
-    defer { defaults.removePersistentDomain(forName: suite) }
-
-    defaults.set("lagoon", forKey: ShelfPreferences.skinKey)
-    defaults.set("dark", forKey: ShelfPreferences.appearanceKey)
-    defaults.set(true, forKey: ShelfPreferences.sourceIconsKey)
-    let moved = ShelfPreferences.load(from: defaults)
-    expect(moved.skin == .classic, "1.2.0's saved Lagoon (the old default) moves to Classic")
-    expect(moved.appearance == .dark, "the rest of 1.2.0's settings are kept")
-    expect(moved.appIconFollowsSkin, "1.2.0 settings have the app icon following the skin")
-    expect(defaults.object(forKey: ShelfPreferences.defaultsVersionKey) == nil, "loading old settings writes nothing")
-
-    defaults.set("sunset", forKey: ShelfPreferences.skinKey)
-    expect(ShelfPreferences.load(from: defaults).skin == .sunset, "a skin other than Lagoon chosen in 1.2.0 is kept")
-}
-
-private func testFinderIconSkin() {
-    var preferences = ShelfPreferences()
-    expect(preferences.customIconSkin == nil, "Classic, the default, uses the app's own icon, so no custom icon")
-    preferences.skin = .lagoon
-    expect(preferences.customIconSkin == .lagoon, "Lagoon shows its own icon in Finder")
-    preferences.skin = .grape
-    preferences.appIconFollowsSkin = false
-    expect(preferences.customIconSkin == nil, "with the switch off the app's own icon stays")
-}
-
 @main
 struct CoreTestRunner {
     static func main() {
@@ -324,8 +251,8 @@ struct CoreTestRunner {
         testUpdateSettingsAreInInfoPlist()
         testLinksAreRecognised()
         testTimeTextNamesTheSourceApp()
+        testSkinPalettesAreReadable()
         testSkinsAndLookSettings()
-        testOldDefaultSkinMovesToClassic()
         testFinderIconSkin()
         do {
             try testSourceAppIsRememberedAndOldItemsStillLoad()
@@ -344,6 +271,6 @@ struct CoreTestRunner {
             fputs("\(failures) core test(s) failed.\n", stderr)
             exit(1)
         }
-        print("All Clipboard Shelf core tests passed.")
+        print("All EchoLena core tests passed.")
     }
 }

@@ -12,8 +12,8 @@
 #   SELF_SIGN_P12_BASE64, SELF_SIGN_P12_PASSWORD           (the self-signed trial)
 set -euo pipefail
 
-KEYCHAIN="${RUNNER_TEMP:?}/clipboard-shelf-signing.keychain-db"
-SECRETS_DIR="$RUNNER_TEMP/clipboard-shelf-signing-secrets"
+KEYCHAIN="${RUNNER_TEMP:?}/echolena-signing.keychain-db"
+SECRETS_DIR="$RUNNER_TEMP/echolena-signing-secrets"
 
 if [[ "${1:-}" == "cleanup" ]]; then
     security delete-keychain "$KEYCHAIN" >/dev/null 2>&1 || true

@@ -2,33 +2,6 @@ import AppKit
 import Observation
 import SwiftUI
 
-extension ShelfRGB {
-    var color: Color { Color(.sRGB, red: red, green: green, blue: blue, opacity: 1) }
-    var nsColor: NSColor { NSColor(srgbRed: red, green: green, blue: blue, alpha: 1) }
-}
-
-/// The size of the popover, kept as it was in every earlier version.
-enum ShelfStyle {
-    static let width: CGFloat = 400
-    static let height: CGFloat = 600
-    /// Dark text and symbols on a pin-coloured button.
-    static let pinInk = Color(red: 0.18, green: 0.12, blue: 0.0)
-    static let paused = Color(red: 1.0, green: 0.62, blue: 0.04)
-}
-
-/// The skin's colours, ready to use.
-struct ShelfPalette {
-    let accent: Color
-    let pin: Color
-    let tint: Color
-
-    init(skin: ShelfSkin) {
-        accent = skin.accent.color
-        pin = skin.pin.color
-        tint = skin.tint.color
-    }
-}
-
 enum ShelfFilter {
     case all
     case pinned
@@ -107,7 +80,7 @@ struct ShelfView: View {
     @Bindable var model: ShelfModel
 
     var body: some View {
-        let palette = ShelfPalette(skin: model.preferences.skin)
+        let palette = ShelfPalette(skin: model.preferences.skin, dark: model.isDark)
         VStack(alignment: .leading, spacing: 0) {
             topRow
                 .padding(.bottom, 12)
@@ -125,27 +98,8 @@ struct ShelfView: View {
         .padding(.top, 16)
         .padding(.bottom, 8)
         .frame(width: ShelfStyle.width, height: ShelfStyle.height, alignment: .top)
-        .background { skinBackground(palette) }
+        .background { ShelfBackground(palette: palette) }
         .environment(\.colorScheme, model.isDark ? .dark : .light)
-    }
-
-    /// A wash of the skin's colour over the popover's own material.
-    private func skinBackground(_ palette: ShelfPalette) -> some View {
-        ZStack {
-            LinearGradient(
-                colors: model.isDark
-                    ? [palette.tint.opacity(0.55), palette.tint.opacity(0.18)]
-                    : [palette.accent.opacity(0.10), palette.accent.opacity(0.02)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            RadialGradient(
-                colors: [palette.accent.opacity(model.isDark ? 0.16 : 0.10), .clear],
-                center: .topLeading,
-                startRadius: 0,
-                endRadius: 380
-            )
-        }
     }
 
     private var topRow: some View {
@@ -195,7 +149,7 @@ struct ShelfView: View {
 
     private func controls(_ palette: ShelfPalette) -> some View {
         HStack(spacing: 8) {
-            FilterPicker(selection: $model.filter, accent: palette.accent)
+            FilterPicker(selection: $model.filter, palette: palette)
             Spacer(minLength: 8)
             Circle()
                 .fill(model.recordingPaused ? ShelfStyle.paused : palette.accent)
@@ -338,7 +292,6 @@ struct EntryRow: View {
     let copy: () -> Void
     let togglePin: () -> Void
     @State private var hovering = false
-    @Environment(\.colorScheme) private var colorScheme
 
     private var source: SourceAppInfo? {
         guard showSourceIcon, let identifier = entry.sourceApp else { return nil }
@@ -350,19 +303,18 @@ struct EntryRow: View {
         let subtitle = entry.isPinned
             ? ClipboardTimeText.pinned(entry.createdAt, now: now, app: sourceInfo?.name)
             : ClipboardTimeText.copied(entry.createdAt, now: now, app: sourceInfo?.name)
-        let pinKind: SquareButton.Kind = entry.isPinned ? .pinned : (hovering ? .onAccent : .quiet)
-        let restingFill = colorScheme == .dark ? Color.white.opacity(0.06) : Color.white.opacity(0.70)
+        let pinKind: SquareButton.Kind = hovering ? .onAccent : (entry.isPinned ? .pinned : .quiet)
         return HStack(spacing: 11) {
             leadingIcon(sourceInfo)
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.text.replacingOccurrences(of: "\n", with: "  "))
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(hovering ? Color.white : Color.primary)
+                    .foregroundStyle(hovering ? palette.onAccent : Color.primary)
                     .lineLimit(2)
                     .truncationMode(.tail)
                 Text(subtitle)
                     .font(.system(size: 12))
-                    .foregroundStyle(hovering ? Color.white.opacity(0.82) : Color.secondary)
+                    .foregroundStyle(hovering ? palette.onAccent.opacity(0.75) : Color.secondary)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -386,11 +338,7 @@ struct EntryRow: View {
         .padding(.trailing, 10)
         .padding(.vertical, 7)
         .frame(minHeight: 50)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(hovering ? palette.accent : restingFill)
-                .shadow(color: hovering ? palette.accent.opacity(0.40) : Color.clear, radius: 7, y: 3)
-        )
+        .background(ShelfRowBackground(palette: palette, highlighted: hovering))
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onHover { hovering = $0 }
         .onTapGesture(perform: copy)
@@ -410,11 +358,11 @@ struct EntryRow: View {
         } else {
             Image(systemName: entry.looksLikeLink ? "link" : "text.alignleft")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(hovering ? Color.white : palette.accent)
+                .foregroundStyle(hovering ? palette.onAccent : palette.accent)
                 .frame(width: 30, height: 30)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(hovering ? Color.white.opacity(0.22) : palette.accent.opacity(0.18))
+                        .fill(hovering ? palette.onAccent.opacity(0.14) : palette.accent.opacity(0.18))
                 )
                 .accessibilityHidden(true)
         }
@@ -445,7 +393,7 @@ struct SectionTitle: View {
 /// All / Pinned, with the chosen one filled in the skin's accent.
 struct FilterPicker: View {
     @Binding var selection: ShelfFilter
-    let accent: Color
+    let palette: ShelfPalette
 
     var body: some View {
         HStack(spacing: 0) {
@@ -463,11 +411,11 @@ struct FilterPicker: View {
         } label: {
             Text(title)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(selected ? Color.white : Color.secondary)
+                .foregroundStyle(selected ? palette.onAccent : Color.secondary)
                 .frame(width: 64, height: 26)
                 .background(
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(selected ? accent : Color.clear)
+                        .fill(selected ? palette.accent : Color.clear)
                 )
                 .contentShape(Rectangle())
         }
@@ -476,8 +424,8 @@ struct FilterPicker: View {
     }
 }
 
-/// The square pin and copy buttons: quiet, gold-coloured for a pinned item, or light on the
-/// accent-coloured row under the pointer.
+/// The square pin and copy buttons: quiet, filled with the skin's accent for a pinned item, or in
+/// the skin's on-accent colour on the accent-coloured row under the pointer.
 struct SquareButton: View {
     enum Kind {
         case quiet
@@ -507,24 +455,24 @@ struct SquareButton: View {
     private var glyph: Color {
         switch kind {
         case .quiet: return Color.secondary
-        case .pinned: return ShelfStyle.pinInk
-        case .onAccent: return Color.white
+        case .pinned: return palette.onAccent
+        case .onAccent: return palette.onAccent
         }
     }
 
     private var fill: Color {
         switch kind {
         case .quiet: return Color.clear
-        case .pinned: return palette.pin
-        case .onAccent: return Color.white.opacity(0.22)
+        case .pinned: return palette.accent
+        case .onAccent: return palette.onAccent.opacity(0.14)
         }
     }
 }
 
 /// Hosts the shelf in the menu-bar popover and passes its actions to the app.
 @MainActor
-final class ClipboardShelfViewController: NSViewController {
-    weak var delegate: ClipboardShelfViewControllerDelegate?
+final class EchoLenaViewController: NSViewController {
+    weak var delegate: EchoLenaViewControllerDelegate?
     private let model = ShelfModel()
 
     override func loadView() {
@@ -538,26 +486,26 @@ final class ClipboardShelfViewController: NSViewController {
         preferredContentSize = NSSize(width: ShelfStyle.width, height: ShelfStyle.height)
         model.onCopy = { [weak self] entry in
             guard let self else { return }
-            self.delegate?.clipboardShelfViewController(self, copy: entry)
+            self.delegate?.echoLenaViewController(self, copy: entry)
         }
         model.onTogglePin = { [weak self] entry in
             guard let self else { return }
-            self.delegate?.clipboardShelfViewController(self, togglePin: entry)
+            self.delegate?.echoLenaViewController(self, togglePin: entry)
         }
         model.onSetPaused = { [weak self] paused in
             guard let self else { return }
-            self.delegate?.clipboardShelfViewController(self, setRecordingPaused: paused)
+            self.delegate?.echoLenaViewController(self, setRecordingPaused: paused)
         }
         model.onClearRecent = { [weak self] in
             guard let self else { return }
-            self.delegate?.clipboardShelfViewControllerClearRecent(self)
+            self.delegate?.echoLenaViewControllerClearRecent(self)
         }
         model.onShowMenu = { [weak self] in
             self?.showMoreMenu()
         }
         model.onCheckForUpdates = { [weak self] in
             guard let self else { return }
-            self.delegate?.clipboardShelfViewControllerCheckForUpdates(self)
+            self.delegate?.echoLenaViewControllerCheckForUpdates(self)
         }
     }
 
@@ -634,7 +582,7 @@ final class ClipboardShelfViewController: NSViewController {
         menu.addItem(check)
         menu.addItem(.separator())
 
-        let quit = NSMenuItem(title: "Quit Clipboard Shelf", action: #selector(quitChosen), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "Quit EchoLena", action: #selector(quitChosen), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
 
@@ -651,7 +599,7 @@ final class ClipboardShelfViewController: NSViewController {
             choice.target = self
             choice.representedObject = skin.rawValue
             choice.state = model.preferences.skin == skin ? .on : .off
-            let configuration = NSImage.SymbolConfiguration(paletteColors: [skin.accent.nsColor])
+            let configuration = NSImage.SymbolConfiguration(paletteColors: [skin.palette(dark: model.isDark).accent.nsColor])
             choice.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: skin.title)?
                 .withSymbolConfiguration(configuration)
             submenu.addItem(choice)
@@ -678,39 +626,39 @@ final class ClipboardShelfViewController: NSViewController {
 
     @objc private func skinChosen(_ sender: NSMenuItem) {
         guard let name = sender.representedObject as? String else { return }
-        delegate?.clipboardShelfViewController(self, setSkin: ShelfSkin.from(stored: name))
+        delegate?.echoLenaViewController(self, setSkin: ShelfSkin.from(stored: name))
     }
 
     @objc private func appearanceChosen(_ sender: NSMenuItem) {
         guard let name = sender.representedObject as? String else { return }
-        delegate?.clipboardShelfViewController(self, setAppearance: ShelfAppearance.from(stored: name))
+        delegate?.echoLenaViewController(self, setAppearance: ShelfAppearance.from(stored: name))
     }
 
     @objc private func toggleSourceIconsChosen() {
-        delegate?.clipboardShelfViewController(self, setShowSourceIcons: !model.preferences.showSourceIcons)
+        delegate?.echoLenaViewController(self, setShowSourceIcons: !model.preferences.showSourceIcons)
     }
 
     @objc private func toggleAppIconChosen() {
-        delegate?.clipboardShelfViewController(self, setAppIconFollowsSkin: !model.preferences.appIconFollowsSkin)
+        delegate?.echoLenaViewController(self, setAppIconFollowsSkin: !model.preferences.appIconFollowsSkin)
     }
 
     @objc private func recentLimitChosen(_ sender: NSMenuItem) {
-        delegate?.clipboardShelfViewController(self, setRecentLimit: sender.tag)
+        delegate?.echoLenaViewController(self, setRecentLimit: sender.tag)
     }
 
     @objc private func togglePausedChosen() {
-        delegate?.clipboardShelfViewController(self, setRecordingPaused: !model.recordingPaused)
+        delegate?.echoLenaViewController(self, setRecordingPaused: !model.recordingPaused)
     }
 
     @objc private func clearRecentChosen() {
-        delegate?.clipboardShelfViewControllerClearRecent(self)
+        delegate?.echoLenaViewControllerClearRecent(self)
     }
 
     @objc private func checkForUpdatesChosen() {
-        delegate?.clipboardShelfViewControllerCheckForUpdates(self)
+        delegate?.echoLenaViewControllerCheckForUpdates(self)
     }
 
     @objc private func quitChosen() {
-        delegate?.clipboardShelfViewControllerQuit(self)
+        delegate?.echoLenaViewControllerQuit(self)
     }
 }
