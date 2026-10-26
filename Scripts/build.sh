@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="1.3.1"
+VERSION="1.4.0"
 BUILD_DIR="$ROOT/.build"
 DIST_DIR="$ROOT/dist"
 APP="$DIST_DIR/EchoLena.app"
@@ -99,6 +99,12 @@ otool -l "$MACOS_DIR/EchoLena" | grep -F 'path @executable_path/../Frameworks'
 grep -F "Sparkle $SPARKLE_VERSION" "$RESOURCES_DIR/Acknowledgements.txt"
 
 plutil -lint "$CONTENTS/Info.plist"
+# The zip is named from VERSION above, and the release job looks for that name: they must agree.
+PLIST_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$CONTENTS/Info.plist")"
+if [[ "$PLIST_VERSION" != "$VERSION" ]]; then
+  echo "error: Info.plist version is $PLIST_VERSION but Scripts/build.sh builds $VERSION" >&2
+  exit 1
+fi
 # Signing is the last change to the app; the zip, the checksum and the update signature come after.
 bash "$ROOT/Scripts/sign-app.sh" "$APP"
 "$MACOS_DIR/EchoLena" --self-test
