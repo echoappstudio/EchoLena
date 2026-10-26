@@ -2,18 +2,18 @@ import AppKit
 import Foundation
 
 @MainActor
-protocol ClipboardShelfViewControllerDelegate: AnyObject {
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, copy entry: ClipboardEntry)
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, togglePin entry: ClipboardEntry)
-    func clipboardShelfViewControllerClearRecent(_ controller: ClipboardShelfViewController)
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setRecordingPaused paused: Bool)
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setRecentLimit limit: Int)
-    func clipboardShelfViewControllerQuit(_ controller: ClipboardShelfViewController)
-    func clipboardShelfViewControllerCheckForUpdates(_ controller: ClipboardShelfViewController)
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setSkin skin: ShelfSkin)
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setAppearance appearance: ShelfAppearance)
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setShowSourceIcons show: Bool)
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setAppIconFollowsSkin follows: Bool)
+protocol EchoLenaViewControllerDelegate: AnyObject {
+    func echoLenaViewController(_ controller: EchoLenaViewController, copy entry: ClipboardEntry)
+    func echoLenaViewController(_ controller: EchoLenaViewController, togglePin entry: ClipboardEntry)
+    func echoLenaViewControllerClearRecent(_ controller: EchoLenaViewController)
+    func echoLenaViewController(_ controller: EchoLenaViewController, setRecordingPaused paused: Bool)
+    func echoLenaViewController(_ controller: EchoLenaViewController, setRecentLimit limit: Int)
+    func echoLenaViewControllerQuit(_ controller: EchoLenaViewController)
+    func echoLenaViewControllerCheckForUpdates(_ controller: EchoLenaViewController)
+    func echoLenaViewController(_ controller: EchoLenaViewController, setSkin skin: ShelfSkin)
+    func echoLenaViewController(_ controller: EchoLenaViewController, setAppearance appearance: ShelfAppearance)
+    func echoLenaViewController(_ controller: EchoLenaViewController, setShowSourceIcons show: Bool)
+    func echoLenaViewController(_ controller: EchoLenaViewController, setAppIconFollowsSkin follows: Bool)
 }
 
 /// Puts the skin's icon on the app itself, as seen in Finder, Launchpad and Spotlight (a menu-bar
@@ -22,7 +22,7 @@ protocol ClipboardShelfViewControllerDelegate: AnyObject {
 @MainActor
 enum FinderIcon {
     /// The skin last put on the app, so a launch with nothing to change writes nothing.
-    static let shownKey = "ClipboardShelfFinderIconShownV1"
+    static let shownKey = "EchoLenaFinderIconShownV1"
 
     /// Shows the skin's icon, or the app's own icon for nil. Returns false if the app couldn't
     /// change it (for example an app it may not write to); the app's own icon then stays.
@@ -46,13 +46,13 @@ enum FinderIcon {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, ClipboardShelfViewControllerDelegate {
-    private let defaultsKey = "ClipboardShelfHistoryV1"
-    private let pausedKey = "ClipboardShelfRecordingPausedV1"
-    private let recentLimitKey = "ClipboardShelfRecentLimitV1"
+final class AppDelegate: NSObject, NSApplicationDelegate, EchoLenaViewControllerDelegate {
+    private let defaultsKey = "EchoLenaHistoryV1"
+    private let pausedKey = "EchoLenaRecordingPausedV1"
+    private let recentLimitKey = "EchoLenaRecentLimitV1"
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
-    private var shelfController: ClipboardShelfViewController!
+    private var shelfController: EchoLenaViewController!
     private var history = ClipboardHistory(maxRecentItems: ClipboardHistory.defaultRecentLimit)
     private var monitorTimer: Timer?
     private var pasteboardChangeCount = 0
@@ -70,7 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ClipboardShelfViewCont
         loadHistory()
         isRecordingPaused = UserDefaults.standard.bool(forKey: pausedKey)
 
-        shelfController = ClipboardShelfViewController()
+        shelfController = EchoLenaViewController()
         popover = NSPopover()
         shelfController.delegate = self
         shelfController.update(history: history, recordingPaused: isRecordingPaused)
@@ -107,11 +107,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ClipboardShelfViewCont
 
     private func updateStatusItemAppearance() {
         guard let button = statusItem.button else { return }
-        let imageName = isRecordingPaused ? "pause.circle.fill" : "clipboard"
-        let description = isRecordingPaused ? "Clipboard Shelf — recording paused" : "Clipboard Shelf"
-        let image = NSImage(systemSymbolName: imageName, accessibilityDescription: description)
-        image?.isTemplate = true
-        button.image = image
+        let description = isRecordingPaused ? "EchoLena — recording paused" : "EchoLena"
+        button.image = MenuBarGlyph.image(paused: isRecordingPaused, description: description)
         button.toolTip = description
     }
 
@@ -170,7 +167,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ClipboardShelfViewCont
         shelfController.update(history: history, recordingPaused: isRecordingPaused)
     }
 
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, copy entry: ClipboardEntry) {
+    func echoLenaViewController(_ controller: EchoLenaViewController, copy entry: ClipboardEntry) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(entry.text, forType: .string)
@@ -182,13 +179,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ClipboardShelfViewCont
         popover.performClose(nil)
     }
 
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, togglePin entry: ClipboardEntry) {
+    func echoLenaViewController(_ controller: EchoLenaViewController, togglePin entry: ClipboardEntry) {
         history.togglePin(id: entry.id)
         saveHistory()
         shelfController.update(history: history, recordingPaused: isRecordingPaused)
     }
 
-    func clipboardShelfViewControllerClearRecent(_ controller: ClipboardShelfViewController) {
+    func echoLenaViewControllerClearRecent(_ controller: EchoLenaViewController) {
         guard history.entries.contains(where: { !$0.isPinned }) else { return }
 
         let alert = NSAlert()
@@ -205,14 +202,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ClipboardShelfViewCont
         shelfController.update(history: history, recordingPaused: isRecordingPaused)
     }
 
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setRecordingPaused paused: Bool) {
+    func echoLenaViewController(_ controller: EchoLenaViewController, setRecordingPaused paused: Bool) {
         isRecordingPaused = paused
         UserDefaults.standard.set(paused, forKey: pausedKey)
         updateStatusItemAppearance()
         shelfController.updateRecordingPaused(paused)
     }
 
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setRecentLimit limit: Int) {
+    func echoLenaViewController(_ controller: EchoLenaViewController, setRecentLimit limit: Int) {
         let limit = ClipboardHistory.validRecentLimit(limit)
         UserDefaults.standard.set(limit, forKey: recentLimitKey)
         history.setMaxRecentItems(limit)
@@ -220,35 +217,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ClipboardShelfViewCont
         shelfController.update(history: history, recordingPaused: isRecordingPaused)
     }
 
-    func clipboardShelfViewControllerQuit(_ controller: ClipboardShelfViewController) {
+    func echoLenaViewControllerQuit(_ controller: EchoLenaViewController) {
         NSApp.terminate(nil)
     }
 
-    func clipboardShelfViewControllerCheckForUpdates(_ controller: ClipboardShelfViewController) {
+    func echoLenaViewControllerCheckForUpdates(_ controller: EchoLenaViewController) {
         popover.performClose(nil)
         updates.checkForUpdates()
     }
 
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setSkin skin: ShelfSkin) {
+    func echoLenaViewController(_ controller: EchoLenaViewController, setSkin skin: ShelfSkin) {
         preferences.skin = skin
         preferences.save()
         applyPreferences()
         FinderIcon.show(preferences.customIconSkin)
     }
 
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setAppearance appearance: ShelfAppearance) {
+    func echoLenaViewController(_ controller: EchoLenaViewController, setAppearance appearance: ShelfAppearance) {
         preferences.appearance = appearance
         preferences.save()
         applyPreferences()
     }
 
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setShowSourceIcons show: Bool) {
+    func echoLenaViewController(_ controller: EchoLenaViewController, setShowSourceIcons show: Bool) {
         preferences.showSourceIcons = show
         preferences.save()
         applyPreferences()
     }
 
-    func clipboardShelfViewController(_ controller: ClipboardShelfViewController, setAppIconFollowsSkin follows: Bool) {
+    func echoLenaViewController(_ controller: EchoLenaViewController, setAppIconFollowsSkin follows: Bool) {
         preferences.appIconFollowsSkin = follows
         preferences.save()
         applyPreferences()
@@ -283,7 +280,7 @@ private func runSelfTest() -> Int32 {
         fputs("Self-test failed: clipboard history limit\n", stderr)
         return 1
     }
-    guard Bundle.main.bundleIdentifier == "local.clipboardshelf" else {
+    guard Bundle.main.bundleIdentifier == "com.echoapps.echolena" else {
         fputs("Self-test failed: bundle identifier\n", stderr)
         return 1
     }
@@ -318,7 +315,7 @@ private func runSelfTest() -> Int32 {
         fputs("Self-test failed: password app bundle identifiers\n", stderr)
         return 1
     }
-    guard ShelfSkin.allCases.count == 6, ShelfSkin.from(stored: "nonsense") == .classic,
+    guard ShelfSkin.allCases.count == 6, ShelfSkin.builtInIcon == .signature, ShelfSkin.from(stored: "nonsense") == .signature,
           ShelfPreferences().showSourceIcons, ShelfPreferences().appIconFollowsSkin else {
         fputs("Self-test failed: skins and look defaults\n", stderr)
         return 1
@@ -330,7 +327,7 @@ private func runSelfTest() -> Int32 {
             return 1
         }
     }
-    print("Clipboard Shelf bundle self-test passed.")
+    print("EchoLena bundle self-test passed.")
     return 0
 }
 

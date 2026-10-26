@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# Updates an older Clipboard Shelf to a newer one through Sparkle, using a test feed on this Mac:
-#   1. with automatic checks turned off in the app's saved settings, Clipboard Shelf doesn't check;
+# Updates an older EchoLena to a newer one through Sparkle, using a test feed on this Mac:
+#   1. with automatic checks turned off in the app's saved settings, EchoLena doesn't check;
 #   2. an update whose signature doesn't match is downloaded but never installed;
-#   3. a correctly signed update is installed and Clipboard Shelf relaunches as the new version,
+#   3. a correctly signed update is installed and EchoLena relaunches as the new version,
 #      with its settings kept and (for a real signing identity) the same code identity.
-# The installed copy wears the Grape icon in Finder throughout (the app puts it on itself at launch),
+# The installed copy wears the Sky icon in Finder throughout (the app puts it on itself at launch),
 # so this also shows that the custom icon doesn't stop an update, and that it comes back after one.
 # The two test copies are the packaged app with a test feed address, a throwaway signing key and
 # their own version numbers, re-signed with a throwaway self-signed identity made here, so both
 # copies share one identity the way a release does. No secret is needed. Needs OpenSSL 3.
-# It writes Sparkle's settings for local.clipboardshelf, so run it on CI, not on a Mac you use.
+# It writes Sparkle's settings for com.echoapps.echolena, so run it on CI, not on a Mac you use.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="Clipboard Shelf"
-PROCESS="ClipboardShelf"
+APP_NAME="EchoLena"
+PROCESS="EchoLena"
 SOURCE_APP="$ROOT_DIR/dist/$APP_NAME.app"
 RELEASE_TOOL=(python3 -I "$ROOT_DIR/Scripts/release/sparkle_release.py")
 SIGN_UPDATE="$ROOT_DIR/.build/Sparkle-2.10.0/bin/sign_update"
-DOMAIN="local.clipboardshelf"
-MARKER_KEY="ClipboardShelf.updateTestMarker"
+DOMAIN="com.echoapps.echolena"
+MARKER_KEY="EchoLena.updateTestMarker"
 PORT=8765
 FEED_URL="http://127.0.0.1:$PORT/appcast.xml"
 
@@ -30,7 +30,7 @@ fi
 export SPARKLE_OPENSSL
 "$SPARKLE_OPENSSL" version | grep -q '^OpenSSL 3'
 
-WORK_DIR="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/clipboard-shelf-update.XXXXXX")"
+WORK_DIR="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/echolena-update.XXXXXX")"
 FEED_DIR="$WORK_DIR/feed"
 INSTALL_DIR="$WORK_DIR/Applications"
 INSTALLED_APP="$INSTALL_DIR/$APP_NAME.app"
@@ -48,9 +48,8 @@ cleanup() {
         kill "$SERVER_PID" >/dev/null 2>&1 || true
     fi
     defaults delete "$DOMAIN" "$MARKER_KEY" >/dev/null 2>&1 || true
-    defaults delete "$DOMAIN" ClipboardShelfSkinV1 >/dev/null 2>&1 || true
-    defaults delete "$DOMAIN" ClipboardShelfLookDefaultsVersion >/dev/null 2>&1 || true
-    defaults delete "$DOMAIN" ClipboardShelfFinderIconShownV1 >/dev/null 2>&1 || true
+    defaults delete "$DOMAIN" EchoLenaSkinV1 >/dev/null 2>&1 || true
+    defaults delete "$DOMAIN" EchoLenaFinderIconShownV1 >/dev/null 2>&1 || true
     if [[ -n "${TEST_KEYCHAIN:-}" ]]; then
         security delete-keychain "$TEST_KEYCHAIN" >/dev/null 2>&1 || true
     fi
@@ -69,7 +68,7 @@ BASE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "
 OLD_BUILD="$BASE_BUILD"
 NEW_BUILD="$((BASE_BUILD + 1))"
 NEW_VERSION="$BASE_VERSION.1"
-ARCHIVE_NAME="Clipboard-Shelf-$NEW_VERSION.zip"
+ARCHIVE_NAME="EchoLena-$NEW_VERSION.zip"
 
 # A throwaway code-signing identity. The old and new copies must share one identity, as a release
 # does, so macOS keeps its permissions and Sparkle accepts the update. The real release certificate
@@ -79,7 +78,7 @@ TEST_KEYCHAIN_PASSWORD="$(head -c 24 /dev/urandom | base64)"
 TEST_P12_PASSWORD="$(head -c 24 /dev/urandom | base64)"
 "$SPARKLE_OPENSSL" req -x509 -newkey rsa:2048 -nodes -days 2 \
     -keyout "$WORK_DIR/identity.key" -out "$WORK_DIR/identity.crt" \
-    -subj "/CN=Clipboard Shelf update test" \
+    -subj "/CN=EchoLena update test" \
     -addext "keyUsage=critical,digitalSignature" -addext "extendedKeyUsage=codeSigning" 2>/dev/null
 "$SPARKLE_OPENSSL" pkcs12 -export -legacy -inkey "$WORK_DIR/identity.key" -in "$WORK_DIR/identity.crt" \
     -out "$WORK_DIR/identity.p12" -passout "pass:$TEST_P12_PASSWORD"
@@ -194,16 +193,15 @@ quit_app() {
 ditto "$OLD_APP" "$INSTALLED_APP"
 MARKER="kept-$(date +%s)"
 defaults write "$DOMAIN" "$MARKER_KEY" -string "$MARKER"
-# A skin other than Classic, the app's own icon, so the app wears a custom icon in Finder.
-defaults write "$DOMAIN" ClipboardShelfSkinV1 -string grape
-defaults write "$DOMAIN" ClipboardShelfLookDefaultsVersion -int 2
+# A skin other than Signature, the app's own icon, so the app wears a custom icon in Finder.
+defaults write "$DOMAIN" EchoLenaSkinV1 -string sky
 defaults write "$DOMAIN" SUAutomaticallyUpdate -bool true
 # A check just happened as far as the hourly schedule knows, so only the launch check can find
 # the update quickly.
 defaults write "$DOMAIN" SULastCheckTime -date "$(date -u '+%Y-%m-%d %H:%M:%S +0000')"
 defaults delete "$DOMAIN" SUSkippedVersion >/dev/null 2>&1 || true
 
-echo "1. Automatic checks off: Clipboard Shelf must not check."
+echo "1. Automatic checks off: EchoLena must not check."
 cp "$WORK_DIR/appcast-good.xml" "$FEED_DIR/appcast.xml"
 defaults write "$DOMAIN" SUEnableAutomaticChecks -bool false
 launch_installed
@@ -229,14 +227,14 @@ quit_app
 test "$(installed_build)" = "$OLD_BUILD"
 echo "   The update was downloaded and refused."
 
-# The earlier launches put the Grape icon on the installed copy.
+# The earlier launches put the Sky icon on the installed copy.
 if [[ ! -f "$INSTALLED_APP/Icon"$'\r' ]]; then
     echo "The installed copy should be wearing its skin icon in Finder by now." >&2
     exit 1
 fi
 echo "   The installed copy wears its skin icon in Finder."
 
-echo "3. A signed update installs and Clipboard Shelf relaunches."
+echo "3. A signed update installs and EchoLena relaunches."
 cp "$WORK_DIR/appcast-good.xml" "$FEED_DIR/appcast.xml"
 defaults write "$DOMAIN" SULastCheckTime -date "$(date -u '+%Y-%m-%d %H:%M:%S +0000')"
 REQUESTS_BEFORE="$(feed_requests)"

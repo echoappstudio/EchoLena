@@ -1,4 +1,4 @@
-name: Release Clipboard Shelf
+name: Release EchoLena
 
 # Runs when the macOS CI run for a push to main succeeds, and reads that run's app. The release
 # signing secrets are only used here, never by pull request checks.
@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 15
     # One release at a time; a newer run waits instead of racing an older one.
     concurrency:
-      group: clipboard-shelf-release
+      group: echolena-release
       cancel-in-progress: false
     permissions:
       contents: write
@@ -27,7 +27,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       FEED_URL: https://github.com/${{ github.repository }}/releases/latest/download/appcast.xml
       HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-      ARTIFACT: Clipboard-Shelf-${{ github.event.workflow_run.head_sha }}-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+      ARTIFACT: EchoLena-${{ github.event.workflow_run.head_sha }}-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -94,7 +94,7 @@ jobs:
           BUILD: ${{ steps.version.outputs.build }}
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
-          zip="Clipboard-Shelf-$VERSION.zip"
+          zip="EchoLena-$VERSION.zip"
           sha256sum -c "$zip.sha256"
           cat signing.txt
           mode="$(sed -n 's/^mode=//p' signing.txt)"
@@ -102,9 +102,9 @@ jobs:
           case "$mode" in
             self-signed) ;;
             developer-id) [ "$notarized" = "yes" ] || { echo "Developer ID builds must be notarized before release."; exit 1; } ;;
-            *) echo "Releases need a real signing identity so macOS keeps Clipboard Shelf's identity; this build is $mode-signed."; exit 1 ;;
+            *) echo "Releases need a real signing identity so macOS keeps EchoLena's identity; this build is $mode-signed."; exit 1 ;;
           esac
-          unzip -p "$zip" "Clipboard Shelf.app/Contents/Info.plist" > shipped-Info.plist
+          unzip -p "$zip" "EchoLena.app/Contents/Info.plist" > shipped-Info.plist
           read -r shipped_version shipped_build shipped_key < <(python3 -c "import plistlib; d = plistlib.load(open('shipped-Info.plist', 'rb')); print(d['CFBundleShortVersionString'], d['CFBundleVersion'], d['SUPublicEDKey'])")
           [ "$shipped_version" = "$VERSION" ] && [ "$shipped_build" = "$BUILD" ]
           signing_key="$(python3 -I ../Scripts/release/sparkle_release.py public-key --seed-env SPARKLE_PRIVATE_KEY)"
@@ -121,7 +121,7 @@ jobs:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           tool="python3 -I Scripts/release/sparkle_release.py"
-          zip="Clipboard-Shelf-$VERSION.zip"
+          zip="EchoLena-$VERSION.zip"
           notes="docs/releases/$VERSION.md"
           [ -f "$notes" ] || { echo "Missing $notes"; exit 1; }
           if [ -f current-appcast.xml ]; then
@@ -131,7 +131,7 @@ jobs:
           signature="$($tool sign --seed-env SPARKLE_PRIVATE_KEY "release/$zip")"
           $tool verify --public-key "$public_key" "release/$zip" "$signature"
           printf '%s\n' "$signature" > "release/$zip.sig"
-          $tool feed --app-name "Clipboard Shelf" --version "$VERSION" --build "$BUILD" \
+          $tool feed --app-name "EchoLena" --version "$VERSION" --build "$BUILD" \
             --url "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/$zip" \
             --archive "release/$zip" --signature "$signature" --minimum-system 26.0 \
             --notes "$notes" --output release/appcast.xml
@@ -142,10 +142,10 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          zip="Clipboard-Shelf-$VERSION.zip"
+          zip="EchoLena-$VERSION.zip"
           notes="docs/releases/$VERSION.md"
           gh release create "v$VERSION" "release/$zip" "release/$zip.sha256" "release/$zip.sig" release/appcast.xml \
-            --repo "$GITHUB_REPOSITORY" --target "$HEAD_SHA" --title "Clipboard Shelf $VERSION" --notes-file "$notes" --latest=false
+            --repo "$GITHUB_REPOSITORY" --target "$HEAD_SHA" --title "EchoLena $VERSION" --notes-file "$notes" --latest=false
       - name: Check the public download, then add it to the feed
         if: steps.existing.outputs.advertised == 'false'
         env:
@@ -153,7 +153,7 @@ jobs:
           BUILD: ${{ steps.version.outputs.build }}
         run: |
           tool="python3 -I Scripts/release/sparkle_release.py"
-          zip="Clipboard-Shelf-$VERSION.zip"
+          zip="EchoLena-$VERSION.zip"
           base="https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION"
           mkdir -p public
           # Anyone can download it, logged out, and it's byte-for-byte the tested app.
@@ -161,7 +161,7 @@ jobs:
           curl -fsSL -o "public/$zip.sha256" "$base/$zip.sha256"
           curl -fsSL -o public/appcast.xml "$base/appcast.xml"
           (cd public && sha256sum -c "$zip.sha256")
-          unzip -p "public/$zip" "Clipboard Shelf.app/Contents/Info.plist" > public/Info.plist
+          unzip -p "public/$zip" "EchoLena.app/Contents/Info.plist" > public/Info.plist
           public_key="$(python3 -c "import plistlib; print(plistlib.load(open('public/Info.plist', 'rb'))['SUPublicEDKey'])")"
           $tool verify-feed --public-key "$public_key" public/appcast.xml
           [ "$($tool feed-build public/appcast.xml)" = "$BUILD" ]

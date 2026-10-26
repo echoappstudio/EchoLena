@@ -3,25 +3,25 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDisplayName</key>
-    <string>Clipboard Shelf</string>
+    <string>EchoLena</string>
     <key>CFBundleExecutable</key>
-    <string>ClipboardShelf</string>
+    <string>EchoLena</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>local.clipboardshelf</string>
+    <string>com.echoapps.echolena</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Clipboard Shelf</string>
+    <string>EchoLena</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.3.1</string>
+    <string>1.4.0</string>
     <key>CFBundleVersion</key>
-    <string>11</string>
+    <string>12</string>
     <key>LSMinimumSystemVersion</key>
     <string>26.0</string>
     <key>LSUIElement</key>
@@ -31,7 +31,7 @@
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026 Echo App Studio</string>
     <key>SUFeedURL</key>
-    <string>https://github.com/9phfr6dsw4-dotcom/clipboard-shelf/releases/latest/download/appcast.xml</string>
+    <string>https://github.com/echoappstudio/EchoLena/releases/latest/download/appcast.xml</string>
     <key>SUPublicEDKey</key>
     <string>XbrkJTaPzhNpqefpNzb+rr0Rwe+AP5R0B4o+gv3Aur0=</string>
     <key>SUEnableAutomaticChecks</key>

@@ -1,4 +1,4 @@
-Clipboard Shelf includes the following open-source software.
+EchoLena includes the following open-source software.
 
 ========================================
 Sparkle 2.10.0 (https://sparkle-project.org)

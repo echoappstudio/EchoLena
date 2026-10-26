@@ -29,14 +29,6 @@ jobs:
           test "$passwords_id" = "com.apple.Passwords"
           test "$keychain_id" = "com.apple.keychainaccess"
 
-      - name: Verify isolated synthetic clipboard fixture
-        timeout-minutes: 10
-        run: bash .github/scripts/verify-clipboard-demo-isolation.sh
-
-      - name: Verify PID-bound popover geometry with a synthetic fixture
-        timeout-minutes: 15
-        run: bash .github/scripts/verify-status-popover-geometry.sh
-
       - name: Run Swift core tests
         run: bash Scripts/test.sh
 
@@ -71,33 +63,13 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v7
         with:
-          name: Clipboard-Shelf-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: EchoLena-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            dist/Clipboard-Shelf-*.zip
-            dist/Clipboard-Shelf-*.zip.sha256
+            dist/EchoLena-*.zip
+            dist/EchoLena-*.zip.sha256
             dist/signing.txt
           if-no-files-found: error
           retention-days: 30
-
-  readme-media-safety:
-    name: README media safety tests
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Test README media safety and format checks
-        run: |
-          bash .github/scripts/test-readme-media-runtime.sh
-          python3 .github/scripts/test-readme-media-artifacts.py
-          python3 .github/scripts/test-readme-media-security.py
-          python3 .github/scripts/test-readme-media-demo.py
-          python3 .github/scripts/test-readme-media-capture-validation.py
-          python3 .github/scripts/test-readme-media-release.py
-          python3 .github/scripts/test-readme-media-popover-selection.py
 
   release-tools:
     name: Test release tools

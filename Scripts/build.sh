@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="1.3.1"
 BUILD_DIR="$ROOT/.build"
 DIST_DIR="$ROOT/dist"
-APP="$DIST_DIR/Clipboard Shelf.app"
+APP="$DIST_DIR/EchoLena.app"
 CONTENTS="$APP/Contents"
 MACOS_DIR="$CONTENTS/MacOS"
 RESOURCES_DIR="$CONTENTS/Resources"
@@ -36,9 +36,9 @@ cp "$ROOT/Resources/AppIcon-1024.png" "$RESOURCES_DIR/AppIcon-1024.png"
 python3 "$ROOT/Scripts/test_icon_package.py" "$ROOT/Resources/AppIcon-1024.png" "$APP"
 cp "$ROOT/Resources/Info.plist" "$CONTENTS/Info.plist"
 cp "$ROOT/Resources/Acknowledgements.txt" "$RESOURCES_DIR/Acknowledgements.txt"
-# One icon per skin (but Classic, the app's own icon), put on the app in Finder when that skin is chosen.
+# One icon per skin (but Signature, the app's own icon), put on the app in Finder when that skin is chosen.
 mkdir -p "$RESOURCES_DIR/SkinIcons"
-for skin in lagoon grape sunset meadow rose; do
+for skin in sky green turquoise bordeaux wisteria; do
   test -s "$ROOT/Resources/SkinIcons/icon-$skin.png" || { echo "Resources/SkinIcons/icon-$skin.png is missing" >&2; exit 1; }
   cp "$ROOT/Resources/SkinIcons/icon-$skin.png" "$RESOURCES_DIR/SkinIcons/icon-$skin.png"
 done
@@ -74,16 +74,19 @@ COMMON_ARGS=(
   -F "$SPARKLE_FRAMEWORKS"
   -framework Sparkle
   -Xlinker -rpath -Xlinker @executable_path/../Frameworks
-  "$ROOT/Sources/ClipboardCore.swift"
+  "$ROOT/Sources/EchoLenaCore.swift"
+  "$ROOT/Sources/Signature.swift"
+  "$ROOT/Sources/Theme.swift"
+  "$ROOT/Sources/MenuBarGlyph.swift"
   "$ROOT/Sources/ShelfView.swift"
   "$ROOT/Sources/Updates.swift"
   "$ROOT/Sources/main.swift"
 )
 
-xcrun swiftc "${COMMON_ARGS[@]}" -target arm64-apple-macos26.0 -o "$BUILD_DIR/ClipboardShelf-arm64"
-xcrun swiftc "${COMMON_ARGS[@]}" -target x86_64-apple-macos26.0 -o "$BUILD_DIR/ClipboardShelf-x86_64"
-lipo -create "$BUILD_DIR/ClipboardShelf-arm64" "$BUILD_DIR/ClipboardShelf-x86_64" -output "$MACOS_DIR/ClipboardShelf"
-chmod +x "$MACOS_DIR/ClipboardShelf"
+xcrun swiftc "${COMMON_ARGS[@]}" -target arm64-apple-macos26.0 -o "$BUILD_DIR/EchoLena-arm64"
+xcrun swiftc "${COMMON_ARGS[@]}" -target x86_64-apple-macos26.0 -o "$BUILD_DIR/EchoLena-x86_64"
+lipo -create "$BUILD_DIR/EchoLena-arm64" "$BUILD_DIR/EchoLena-x86_64" -output "$MACOS_DIR/EchoLena"
+chmod +x "$MACOS_DIR/EchoLena"
 
 # Sparkle goes in beside the app, and the app finds it through the rpath set above.
 mkdir -p "$FRAMEWORKS_DIR"
@@ -92,14 +95,14 @@ SPARKLE_BUILT="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' 
 [[ "$SPARKLE_BUILT" == "$SPARKLE_VERSION" ]]
 test -x "$FRAMEWORKS_DIR/Sparkle.framework/Versions/B/Autoupdate"
 test -x "$FRAMEWORKS_DIR/Sparkle.framework/Versions/B/Updater.app/Contents/MacOS/Updater"
-otool -l "$MACOS_DIR/ClipboardShelf" | grep -F 'path @executable_path/../Frameworks'
+otool -l "$MACOS_DIR/EchoLena" | grep -F 'path @executable_path/../Frameworks'
 grep -F "Sparkle $SPARKLE_VERSION" "$RESOURCES_DIR/Acknowledgements.txt"
 
 plutil -lint "$CONTENTS/Info.plist"
 # Signing is the last change to the app; the zip, the checksum and the update signature come after.
 bash "$ROOT/Scripts/sign-app.sh" "$APP"
-"$MACOS_DIR/ClipboardShelf" --self-test
-ARCHS="$(lipo -archs "$MACOS_DIR/ClipboardShelf")"
+"$MACOS_DIR/EchoLena" --self-test
+ARCHS="$(lipo -archs "$MACOS_DIR/EchoLena")"
 [[ " $ARCHS " == *" arm64 "* && " $ARCHS " == *" x86_64 "* ]]
 
 NOTARIZED="no"
@@ -108,11 +111,11 @@ if [[ "$SIGN_MODE" == "developer-id" ]]; then
   NOTARIZED="yes"
 fi
 
-ditto -c -k --sequesterRsrc --keepParent "$APP" "$DIST_DIR/Clipboard-Shelf-$VERSION.zip"
+ditto -c -k --sequesterRsrc --keepParent "$APP" "$DIST_DIR/EchoLena-$VERSION.zip"
 (
   cd "$DIST_DIR"
-  shasum -a 256 "Clipboard-Shelf-$VERSION.zip" > "Clipboard-Shelf-$VERSION.zip.sha256"
+  shasum -a 256 "EchoLena-$VERSION.zip" > "EchoLena-$VERSION.zip.sha256"
 )
 printf 'mode=%s\nnotarized=%s\n' "$SIGN_MODE" "$NOTARIZED" > "$DIST_DIR/signing.txt"
 
-printf 'Built %s\n' "$DIST_DIR/Clipboard-Shelf-$VERSION.zip"
+printf 'Built %s\n' "$DIST_DIR/EchoLena-$VERSION.zip"
